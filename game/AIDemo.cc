@@ -36,8 +36,12 @@ struct PLAYER_NAME : public Player {
 
     
     // If nearly out of time, do nothing.
-    double st = status(me());
+    double st = status(me());  
     if (st >= 0.9) return;
+	/**
+	 * * me es el id del jugador
+	 * * status es el valor de cpu usado hasta ahora
+	*/
 
     // If more than halfway through, do nothing.
     if (round() > num_rounds()/2) return;
@@ -46,6 +50,9 @@ struct PLAYER_NAME : public Player {
 
     
     // Write debugging info about barricades
+	/*
+	* bs es el vector de las posiciones de las barricadas
+	*/
     vector<Pos> bs = barricades(me());
     cerr << "At round " << round() << " player " << me() << " has " << bs.size() << " barricades:" << endl;
     for (Pos& p : bs) {
@@ -60,6 +67,7 @@ struct PLAYER_NAME : public Player {
       vector<int> b = builders(me());
       for (int id : b) { // Iterate over all builders
 	Pos p = citizen(id).pos;
+	
 
 
 	
