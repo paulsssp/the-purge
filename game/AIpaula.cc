@@ -22,11 +22,10 @@ struct PLAYER_NAME : public Player {
    * Types and attributes for your player can be defined here.
    */
 
-  typedef vector<int> VI;
-  typedef vector<VI> Dist;
   typedef vector<bool> VB;
   typedef vector<VB> VVB;
-  typedef queue<Pos> Posicions;
+  typedef vector<Pos> VP;
+  typedef vector<VP> VVP;
 
   // realmente lo necesito? 
   const vector<Dir> dirs = {Up,Down,Left,Right};
@@ -34,7 +33,7 @@ struct PLAYER_NAME : public Player {
 
   // retorna si la celda es valida para pasar sin obstaculos (barricadas de otros, edificios, ni jugadores)
   // si me guardo un vector de esto, puede q luego sí q hayan obstaculos ?????????????????????????
-  bool barricade_valid_cell(Pos p) {
+  bool valid_cell(Pos p) {
     return cell(p).type == Street and cell(p).id == -1 and (cell(p).b_owner == -1 or cell(p).b_owner == me());
   }
 
@@ -53,16 +52,13 @@ struct PLAYER_NAME : public Player {
     return cell(p).type == Street and cell(p).id == -1 and cell(p).b_owner == -1 and (between_buildings(p) or between_building_limit(p));
   }
 
-  // Identifying a street cell between two building cells
   // hago un bfs y retorno el camino para que lo siga el constructor
   // tener en cuenta de que nadie más está yendo a esa misma celda
-  vector<Pos> path_barricades(Pos pos_ini) {
-    vector<Pos> path;
+  Pos bfs_path_barricades (Pos pos_ini, VVP& prev_path) {
     VVB visited(board_rows(), VB(board_cols(), false));
-    queue<Pos> q;
-
-    q.push(pos_ini);
     visited[pos_ini.i][pos_ini.j] = true;
+    queue<Pos> q;
+    q.push(pos_ini);
 
     while (not q.empty()) {
       Pos pos = q.front();
@@ -70,15 +66,52 @@ struct PLAYER_NAME : public Player {
 
       for (Dir d : dirs) {
         Pos npos = pos + d;
-        if (pos_ok(npos) and not visited[npos.i][npos.j] and barricade_valid_cell(npos)) {
+        if (pos_ok(npos) and not visited[npos.i][npos.j] and valid_cell(npos)) {
+          q.push(npos);
           visited[npos.i][npos.j] = true;
-          path.push_back(npos);
-          if (can_place_barricade(npos)) return path; 
-          q.push(npos); 
+          prev_path[npos.i][npos.j] = pos;
+          if (can_place_barricade(npos)) {
+            return npos;
+          }
         }
       }
+    } 
+    return Pos(-1,-1);
+  }
+
+  Pos bfs_path_money (Pos pos_ini, VVP& prev_path) {
+    VVB visited(board_rows(), VB(board_cols(), false));
+    visited[pos_ini.i][pos_ini.j] = true;
+    queue<Pos> q;
+    q.push(pos_ini);
+
+    while (not q.empty()) {
+      Pos pos = q.front();
+      q.pop();
+
+      for (Dir d : dirs) {
+        Pos npos = pos + d;
+        if (pos_ok(npos) and not visited[npos.i][npos.j] and valid_cell(npos)) {
+          q.push(npos);
+          visited[npos.i][npos.j] = true;
+          prev_path[npos.i][npos.j] = pos;
+          if (cell(npos).bonus == Money) {
+            return npos;
+          }
+        }
+      }
+    } 
+    return Pos(-1,-1);
+  }
+
+  Pos reverse_path(Pos pos, const VVP& prev_path, int id) {
+    stack<Pos> s;
+    s.push(pos);
+    while (s.top() != citizen(id).pos) {
+      s.push(prev_path[s.top().i][s.top().j]);
     }
-    return vector<Pos>();
+    s.pop();
+    return s.top();
   }
 
   Dir set_movement(Pos movement, int id) {
@@ -91,28 +124,52 @@ struct PLAYER_NAME : public Player {
   }
 
 
+  // bug al llegar a x ronda sólo se mueve un constructor
   void move_builders() {
-    if (is_day()) {
-      vector<int> b = builders(me());
-      for (int i = 0; i < 4; ++i) {
+    vector<vector<Pos> > prev_path(board_rows(), vector<Pos>(board_cols()));
+    vector<int> b = builders(me());
+    for (int i = 0; i < 4; ++i) {
+      if (is_day()) {
         // los constructores que hagan sus 3 barricadas
-        if (barricades(me()).size() < 4) {
-          vector<Pos> path = path_barricades(citizen(b[i]).pos);
-          if (path.size() == 0) {
+        if (barricades(me()).size() < 3) {
+          // matriz de las pos previas para construir la barricada
+          Pos future_barricade = bfs_path_barricades(citizen(b[i]).pos, prev_path);
+          if (future_barricade.i == -1) {
             cerr << "No path found for barricade" << endl;
             break;
           } 
           else {
-            Dir d = set_movement(path[0], b[i]);
-            if (path.size() == 1) build(citizen(b[i]).id, d);
+            Pos reverse = reverse_path(future_barricade, prev_path, b[i]);
+            Dir d = set_movement(reverse, b[i]);
+            if (citizen(b[i]).pos + d == future_barricade) build(citizen(b[i]).id, d);
             else move(citizen(b[i]).id, d);
           }
         } 
         // si ya están todas que vayan a por dinero
         else {
+          Pos money = bfs_path_money(citizen(b[i]).pos, prev_path);
+          if (money.i == -1) {
+            cerr << "No path found for money" << endl;
+            break;
+          } 
+          else {
+            Pos reverse = reverse_path(money, prev_path, b[i]);
+            Dir d = set_movement(reverse, b[i]);
+            move(citizen(b[i]).id, d);
+          }
+        }
+      }
 
-          //Dir d = set_movement();
-        //  move(citizen(b[i]).id, );
+      else {
+        Pos money = bfs_path_money(citizen(b[i]).pos, prev_path);
+        if (money.i == -1) {
+          cerr << "No path found for money" << endl;
+          break;
+        } 
+        else {
+          Pos reverse = reverse_path(money, prev_path, b[i]);
+          Dir d = set_movement(reverse, b[i]);
+          move(citizen(b[i]).id, d);
         }
       }
     } 
