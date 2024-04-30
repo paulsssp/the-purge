@@ -24,64 +24,97 @@ struct PLAYER_NAME : public Player {
 
   typedef vector<int> VI;
   typedef vector<VI> Dist;
+  typedef vector<bool> VB;
+  typedef vector<VB> VVB;
   typedef queue<Pos> Posicions;
 
   // realmente lo necesito? 
   const vector<Dir> dirs = {Up,Down,Left,Right};
+  //vector<Pos> barricades_to_build(3); q no vayan a por las mismas barricadas a construir
 
+  // retorna si la celda es valida para pasar sin obstaculos (barricadas de otros, edificios, ni jugadores)
+  // si me guardo un vector de esto, puede q luego sí q hayan obstaculos ?????????????????????????
+  bool barricade_valid_cell(Pos p) {
+    return cell(p).type == Street and cell(p).id == -1 and (cell(p).b_owner == -1 or cell(p).b_owner == me());
+  }
+
+
+  bool between_buildings(Pos p) {
+    if ((cell(p+Up).type == Building and cell(p+Down).type == Building) or (cell(p+Right).type == Building and cell(p+Left).type == Building)) return true;
+    return false;
+  }
+
+  bool between_building_limit(Pos p) {
+    if ((cell(p+Up).type == Building and not pos_ok(p+Down)) or ((cell(p+Down).type == Building and not pos_ok(p+Up))) or ((cell(p+Right).type == Building and not pos_ok(p+Left))) or ((cell(p+Left).type == Building and not pos_ok(p+Right))))  return true;
+    return false;
+  }
+
+  bool can_place_barricade(Pos p) {
+    return cell(p).type == Street and cell(p).id == -1 and cell(p).b_owner == -1 and (between_buildings(p) or between_building_limit(p));
+  }
 
   // Identifying a street cell between two building cells
   // hago un bfs y retorno el camino para que lo siga el constructor
   // tener en cuenta de que nadie más está yendo a esa misma celda
-  void pos_barricades(Pos pos_ini) {
-    
+  vector<Pos> path_barricades(Pos pos_ini) {
+    vector<Pos> path;
+    VVB visited(board_rows(), VB(board_cols(), false));
+    queue<Pos> q;
+
+    q.push(pos_ini);
+    visited[pos_ini.i][pos_ini.j] = true;
+
+    while (not q.empty()) {
+      Pos pos = q.front();
+      q.pop();
+
+      for (Dir d : dirs) {
+        Pos npos = pos + d;
+        if (pos_ok(npos) and not visited[npos.i][npos.j] and barricade_valid_cell(npos)) {
+          visited[npos.i][npos.j] = true;
+          path.push_back(npos);
+          if (can_place_barricade(npos)) return path; 
+          q.push(npos); 
+        }
+      }
+    }
+    return vector<Pos>();
   }
 
-  int minim_tresor(const Graf& mat, Distancies& dis, Posicions& pos, int f, int c) {
-    while (not pos.empty()) {
-        int dis_fila = pos.front().first; //distancias anteriores
-        int dis_col = pos.front().second;
-        pos.pop();
-        for (int i = 0; i < dir; ++i) {
-            int nf = dis_fila + df[i];
-            int nc = dis_col + dc[i];
-            if (pos_valida(mat, dis, nf, nc)) {
-                pos.push(make_pair(nf, nc));
-                dis[nf][nc] = dis[dis_fila][dis_col] + 1;
-                if (mat[nf][nc] == 't') return dis[nf][nc];
-            } 
-        }
-    } 
-    return -1;
-}
+  Dir set_movement(Pos movement, int id) {
+      Dir d;
+      if (movement.i == citizen(id).pos.i + 1) d = Down; 
+      else if (movement.i == citizen(id).pos.i - 1) d = Up;
+      else if (movement.j == citizen(id).pos.j + 1) d = Right;
+      else d = Left;
+      return d;
+  }
+
 
   void move_builders() {
     if (is_day()) {
-      // los constructores que hagan sus 3 barricadas
-      int nro_barricadas = barricades(me()).size();
       vector<int> b = builders(me());
-      int i = 0;
-      while (nro_barricadas < 3) {
-        b[i].build_barricades();
-
-        ++i;
-      }
-
-      /*
-      if (barricades(me()).size() < 3) {
-        vector<int> b = builders(me());
-        for (int id : b) {
-          if (barricades(me()).size() < 3) {
-            for (Dir d : dirs) {
-              if (cell(me()).pos + d != cell(me()).pos) {
-                build(id, d);
-              }
-            }
+      for (int i = 0; i < 4; ++i) {
+        // los constructores que hagan sus 3 barricadas
+        if (barricades(me()).size() < 4) {
+          vector<Pos> path = path_barricades(citizen(b[i]).pos);
+          if (path.size() == 0) {
+            cerr << "No path found for barricade" << endl;
+            break;
+          } 
+          else {
+            Dir d = set_movement(path[0], b[i]);
+            if (path.size() == 1) build(citizen(b[i]).id, d);
+            else move(citizen(b[i]).id, d);
           }
+        } 
+        // si ya están todas que vayan a por dinero
+        else {
+
+          //Dir d = set_movement();
+        //  move(citizen(b[i]).id, );
         }
-      }*/
-
-
+      }
     } 
   }
 
