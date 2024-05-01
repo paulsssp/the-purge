@@ -27,25 +27,21 @@ struct PLAYER_NAME : public Player {
   typedef vector<Pos> VP;
   typedef vector<VP> VVP;
 
-  // realmente lo necesito? 
   const vector<Dir> dirs = {Up,Down,Left,Right};
   //vector<Pos> barricades_to_build(3); q no vayan a por las mismas barricadas a construir
 
   // retorna si la celda es valida para pasar sin obstaculos (barricadas de otros, edificios, ni jugadores)
-  // si me guardo un vector de esto, puede q luego sí q hayan obstaculos ?????????????????????????
   bool valid_cell(Pos p) {
-    return cell(p).type == Street and cell(p).id == -1 and (cell(p).b_owner == -1 or cell(p).b_owner == me());
+    return (cell(p).type == Street and cell(p).id == -1 and (cell(p).b_owner == -1 or cell(p).b_owner == me()));
   }
 
 
   bool between_buildings(Pos p) {
-    if ((cell(p+Up).type == Building and cell(p+Down).type == Building) or (cell(p+Right).type == Building and cell(p+Left).type == Building)) return true;
-    return false;
+    return ((cell(p+Up).type == Building and cell(p+Down).type == Building) or (cell(p+Right).type == Building and cell(p+Left).type == Building));
   }
 
   bool between_building_limit(Pos p) {
-    if ((cell(p+Up).type == Building and not pos_ok(p+Down)) or ((cell(p+Down).type == Building and not pos_ok(p+Up))) or ((cell(p+Right).type == Building and not pos_ok(p+Left))) or ((cell(p+Left).type == Building and not pos_ok(p+Right))))  return true;
-    return false;
+    return ((cell(p+Up).type == Building and not pos_ok(p+Down)) or ((cell(p+Down).type == Building and not pos_ok(p+Up))) or ((cell(p+Right).type == Building and not pos_ok(p+Left))) or ((cell(p+Left).type == Building and not pos_ok(p+Right))));
   }
 
   bool can_place_barricade(Pos p) {
@@ -96,11 +92,13 @@ struct PLAYER_NAME : public Player {
           visited[npos.i][npos.j] = true;
           prev_path[npos.i][npos.j] = pos;
           if (cell(npos).bonus == Money) {
+            //cerr << "Money found" << endl;
             return npos;
           }
         }
       }
     } 
+    //cerr << "No path found for money" << endl;
     return Pos(-1,-1);
   }
 
@@ -135,8 +133,8 @@ struct PLAYER_NAME : public Player {
           // matriz de las pos previas para construir la barricada
           Pos future_barricade = bfs_path_barricades(citizen(b[i]).pos, prev_path);
           if (future_barricade.i == -1) {
-            cerr << "No path found for barricade" << endl;
-            break;
+            //cerr << "No path found for barricade" << endl;
+            //break;
           } 
           else {
             Pos reverse = reverse_path(future_barricade, prev_path, b[i]);
@@ -149,13 +147,14 @@ struct PLAYER_NAME : public Player {
         else {
           Pos money = bfs_path_money(citizen(b[i]).pos, prev_path);
           if (money.i == -1) {
-            cerr << "No path found for money" << endl;
-            break;
+            //cerr << "No path found for money" << endl;
+            ///break;
           } 
           else {
             Pos reverse = reverse_path(money, prev_path, b[i]);
             Dir d = set_movement(reverse, b[i]);
             move(citizen(b[i]).id, d);
+            //cerr << "Moved" << endl;
           }
         }
       }
@@ -163,13 +162,15 @@ struct PLAYER_NAME : public Player {
       else {
         Pos money = bfs_path_money(citizen(b[i]).pos, prev_path);
         if (money.i == -1) {
-          cerr << "No path found for money" << endl;
-          break;
+          //cerr << "No path found for money " << money << endl;
+          //break;
         } 
         else {
           Pos reverse = reverse_path(money, prev_path, b[i]);
+          cout << reverse << endl;
           Dir d = set_movement(reverse, b[i]);
           move(citizen(b[i]).id, d);
+          //cerr << "Moved" << endl;
         }
       }
     } 
