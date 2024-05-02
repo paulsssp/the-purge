@@ -31,28 +31,28 @@ struct PLAYER_NAME : public Player {
   //VP barricades_to_build; // q no vayan a por las mismas barricadas a construir
 
   // retorna si la celda es valida para pasar sin obstaculos (barricadas de otros, edificios, ni jugadores)
-  bool valid_cell(Pos p) {
+  bool valid_cell(const Pos& p) {
     return (cell(p).type == Street and cell(p).id == -1 and (cell(p).b_owner == -1 or cell(p).b_owner == me()));
   }
 
-  bool valid_cell_for_attacking(Pos p) {
+  bool valid_cell_for_attacking(const Pos& p) {
     return (cell(p).type == Street and (cell(p).b_owner == -1 or cell(p).b_owner == me()));
   }
 
-  bool between_buildings(Pos p) {
+  bool between_buildings(const Pos& p) {
     return ((cell(p+Up).type == Building and cell(p+Down).type == Building) or (cell(p+Right).type == Building and cell(p+Left).type == Building));
   }
 
-  bool between_building_limit(Pos p) {
+  bool between_building_limit(const Pos& p) {
     return ((cell(p+Up).type == Building and not pos_ok(p+Down)) or ((cell(p+Down).type == Building and not pos_ok(p+Up))) or ((cell(p+Right).type == Building and not pos_ok(p+Left))) or ((cell(p+Left).type == Building and not pos_ok(p+Right))));
   }
 
-  bool can_place_barricade(Pos p) {
+  bool can_place_barricade(const Pos& p) {
     return cell(p).type == Street and cell(p).id == -1 and cell(p).b_owner == -1 and (between_buildings(p) or between_building_limit(p));
   }
 
   // tener en cuenta de que nadie más está yendo a esa misma celda
-  Pos bfs_path_barricades (Pos pos_ini, VVP& prev_path) {
+  Pos bfs_path_barricades (const Pos& pos_ini, VVP& prev_path) {
     VVB visited(board_rows(), VB(board_cols(), false));
     visited[pos_ini.i][pos_ini.j] = true;
     queue<Pos> q;
@@ -78,7 +78,7 @@ struct PLAYER_NAME : public Player {
   }
 
   // hacer que los constructores eviten pasar por armas?
-  Pos bfs_path_bonus (Pos pos_ini, VVP& prev_path, BonusType bonus) {
+  Pos bfs_path_bonus (const Pos& pos_ini, VVP& prev_path, const BonusType& bonus) {
     VVB visited(board_rows(), VB(board_cols(), false));
     visited[pos_ini.i][pos_ini.j] = true;
     queue<Pos> q;
@@ -103,7 +103,7 @@ struct PLAYER_NAME : public Player {
     return Pos(-1,-1);
   }
 
-  Pos bfs_path_weapon (Pos pos_ini, VVP& prev_path, WeaponType weapon) {
+  Pos bfs_path_weapon (const Pos& pos_ini, VVP& prev_path, const WeaponType& weapon) {
     VVB visited(board_rows(), VB(board_cols(), false));
     visited[pos_ini.i][pos_ini.j] = true;
     queue<Pos> q;
@@ -129,7 +129,7 @@ struct PLAYER_NAME : public Player {
   }
 
 
-  bool is_enemy(Pos p) {
+  bool is_enemy(const Pos& p) {
     vector<int> w = warriors(me());
     vector<int> b = builders(me());
     for (int id : w) {
@@ -141,13 +141,13 @@ struct PLAYER_NAME : public Player {
     return true;
   }
 
-  bool has_worse_weapon(Pos p, Pos m) {
+  bool has_worse_weapon(const Pos& p, const Pos& m) {
     Citizen enemy = citizen(cell(p).id);
     Citizen me = citizen(cell(m).id);
     return (enemy.weapon < me.weapon);
   }
 
-  Pos bfs_path_atack (Pos pos_ini, VVP& prev_path) {
+  Pos bfs_path_atack (const Pos& pos_ini, VVP& prev_path) {
     VVB visited(board_rows(), VB(board_cols(), false));
     visited[pos_ini.i][pos_ini.j] = true;
     queue<Pos> q;
@@ -172,7 +172,7 @@ struct PLAYER_NAME : public Player {
     return Pos(-1,-1);
   }
 
-  Pos reverse_path(Pos pos, const VVP& prev_path, int id) {
+  Pos reverse_path(const Pos& pos, const VVP& prev_path, const int& id) {
     stack<Pos> s;
     s.push(pos);
     while (s.top() != citizen(id).pos) {
@@ -298,7 +298,6 @@ struct PLAYER_NAME : public Player {
           Dir d = set_movement(reverse, id);
           move(citizen(id).id, d);
         }
-        else cerr << "no enemy to atack" << endl;
       }
     }
   }
