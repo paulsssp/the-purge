@@ -1,6 +1,4 @@
 *.o
 .vscode/
 default.res
-paula.txt
 AIpaula_idea_vector.cc
-.gitignore_antiguo
