@@ -35,7 +35,7 @@ struct PLAYER_NAME : public Player {
   }
 
   bool valid_cell_for_attacking(const Pos& p) {
-    return (cell(p).type == Street and (cell(p).b_owner == -1 or cell(p).b_owner == me()));
+    return (cell(p).type == Street and (cell(p).b_owner == -1 or cell(p).b_owner == me() ));
   }
 
   bool between_buildings(const Pos& p) {
@@ -75,7 +75,7 @@ struct PLAYER_NAME : public Player {
     return Pos(-1,-1);
   }
 
-  // hacer que los constructores eviten pasar por armas?????????????????????????????
+  // hacer que los constructores eviten pasar por armas?
   Pos bfs_path_bonus (const Pos& pos_ini, VVP& prev_path, const BonusType& bonus) {
     VVB visited(board_rows(), VB(board_cols(), false));
     visited[pos_ini.i][pos_ini.j] = true;
@@ -215,65 +215,83 @@ struct PLAYER_NAME : public Player {
   }
 
 
-  // si mis dos constructorres tienen bazocas, que se carguen los q estan en el mapa ??????????????????????????????''
+  // si mis dos constructorres tienen bazocas, que se carguen los q estan en el mapa?
   void move_builders() {
     vector<vector<Pos> > prev_path(board_rows(), vector<Pos>(board_cols()));
     vector<int> b = builders(me());
     vector<int> w = warriors(me());
-    for (int i = 0; i < 4; ++i) {
+    for (int id : b) {
       if (is_day()) {
         // los constructores que hagan sus 3 barricadas
         if (barricades(me()).size() < 3) {
           // matriz de las pos previas para construir la barricada
-          Pos future_barricade = bfs_path_barricades(citizen(b[i]).pos, prev_path);
+          Pos future_barricade = bfs_path_barricades(citizen(id).pos, prev_path);
           if (future_barricade.i != -1) {
-            Pos reverse = reverse_path(future_barricade, prev_path, b[i]);
-            Dir d = set_movement(reverse, b[i]);
-            if (citizen(b[i]).pos + d == future_barricade) build(citizen(b[i]).id, d);
-            else move(citizen(b[i]).id, d);
+            Pos reverse = reverse_path(future_barricade, prev_path, id);
+            Dir d = set_movement(reverse, id);
+            if (citizen(id).pos + d == future_barricade) build(citizen(id).id, d);
+            else move(citizen(id).id, d);
           }
         } 
         // si ya están todas que vayan a por comida y dinero
         else {
           // si los guerreros q son los mas prioritarios tienen la vida maxima, que vayan a por comida los constructores
           bool max_life = true;
-          for (int id : w) {
-            if (citizen(id).life < warrior_ini_life()) max_life = false;
+          for (int id2 : w) {
+            if (citizen(id2).life < warrior_ini_life()) max_life = false;
           }
-          if (max_life and citizen(b[i]).life < builder_ini_life()) {
-            Pos food = bfs_path_bonus(citizen(b[i]).pos, prev_path, Food);
+          // quito el /2?
+          if (max_life and citizen(id).life < builder_ini_life()/2) {
+            Pos food = bfs_path_bonus(citizen(id).pos, prev_path, Food);
             if (food.i != -1) {
-              Pos reverse = reverse_path(food, prev_path, b[i]);
-              Dir d = set_movement(reverse, b[i]);
-              move(citizen(b[i]).id, d);
+              Pos reverse = reverse_path(food, prev_path, id);
+              Dir d = set_movement(reverse, id);
+              move(citizen(id).id, d);
+            }
+            else {
+              Pos money = bfs_path_bonus(citizen(id).pos, prev_path, Money);
+              if (money.i != -1) {
+                Pos reverse = reverse_path(money, prev_path, id);
+                Dir d = set_movement(reverse, id);
+                move(citizen(id).id, d);
+              }
             }
           }
           else {
-            Pos money = bfs_path_bonus(citizen(b[i]).pos, prev_path, Money);
+            Pos money = bfs_path_bonus(citizen(id).pos, prev_path, Money);
             if (money.i != -1) {
-              Pos reverse = reverse_path(money, prev_path, b[i]);
-              Dir d = set_movement(reverse, b[i]);
-              move(citizen(b[i]).id, d);
+              Pos reverse = reverse_path(money, prev_path, id);
+              Dir d = set_movement(reverse, id);
+              move(citizen(id).id, d);
             }
           }
         }          
       }
 
       else { // is_night
-        if (citizen(b[i]).life < builder_ini_life()) {
-          Pos food = bfs_path_bonus(citizen(b[i]).pos, prev_path, Food);
+        if (citizen(id).life < builder_ini_life()) {
+          Pos food = bfs_path_bonus(citizen(id).pos, prev_path, Food);
           if (food.i != -1) {
-            Pos reverse = reverse_path(food, prev_path, b[i]);
-            Dir d = set_movement(reverse, b[i]);
-            move(citizen(b[i]).id, d);
+            Pos reverse = reverse_path(food, prev_path, id);
+            Dir d = set_movement(reverse, id);
+            move(citizen(id).id, d);
           }
+          // implementar que si no hay comida, los dos guerreros están muertos y no tienen toda la vida, que vayan a las barricadas
+          else {
+            Pos money = bfs_path_bonus(citizen(id).pos, prev_path, Money);
+            if (money.i != -1) {
+              Pos reverse = reverse_path(money, prev_path, id);
+              Dir d = set_movement(reverse, id);
+              move(citizen(id).id, d);
+            }
+         }
         }
         else {
-          Pos money = bfs_path_bonus(citizen(b[i]).pos, prev_path, Money);
+          Pos money = bfs_path_bonus(citizen(id).pos, prev_path, Money);
           if (money.i != -1) {
-            Pos reverse = reverse_path(money, prev_path, b[i]);
-            Dir d = set_movement(reverse, b[i]);
-            move(citizen(b[i]).id, d);
+            Pos reverse = reverse_path(money, prev_path, id);
+            Dir d = set_movement(reverse, id);
+            move(citizen(id).id, d);
           }
         }
       }
@@ -333,7 +351,6 @@ struct PLAYER_NAME : public Player {
         }
       }
 
-      // tener en cuenta a la hora de matar, que no solo tenga un arma más baja sino que tenga menos vida que nosotros
       // que mate
       else { // is_night
         if (citizen(id).weapon == Hammer) {
@@ -351,6 +368,14 @@ struct PLAYER_NAME : public Player {
             Dir d = set_movement(reverse, id);
             move(citizen(id).id, d);
           }
+          else {
+            Pos enemy = bfs_path_atack_builder(citizen(id).pos, prev_path);
+            if (enemy.i != -1) {
+              Pos reverse = reverse_path(enemy, prev_path, id);
+              Dir d = set_movement(reverse, id);
+              move(citizen(id).id, d);
+            }
+          }
         }
       }
     }
@@ -361,7 +386,6 @@ struct PLAYER_NAME : public Player {
    * Play method, invoked once per each round.
    */
   virtual void play () {
-    //pitonisa come más que paula2
     move_builders();
     move_warriors();
   }
