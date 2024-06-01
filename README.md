@@ -7,3 +7,7 @@ The Purge es el juego de la asignatura [EDA - Estructura de Datos y Algoritmos](
 _Y tú, **¿podraś salir con vida?**_ :japanese_goblin:
 
 Para más detalle lee las [instrucciones](https://github.com/paulsssp/the-purge/P46669_ca.pdf) del juego.
+
+## Competición
+
+Pitonisa Reynolds murió en la ronda 82 de 143.
