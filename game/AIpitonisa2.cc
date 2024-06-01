@@ -5,7 +5,7 @@
  * Write the name of your player and save this file
  * with the same name and .cc extension.
  */
-#define PLAYER_NAME pitonisa2
+#define PLAYER_NAME pitonisa_V2
 
 
 struct PLAYER_NAME : public Player {
@@ -32,19 +32,35 @@ struct PLAYER_NAME : public Player {
   // devuelve el id del jugador que tiene la mayor puntuación
   int winner(){
     int winner = 0;
-    for (int i = 1; i < 4; ++i) {
+    for (int i = 1; i < num_players(); ++i) {
       if (score(i) > score(winner)) winner = i;
     }
     return winner;
   } 
+
+  bool comp(int a, int b) {
+    return score(a) < score(b);
+  }
+
+  // Pre: no voy ganando
+  int id_more_points(){
+    vector<int> p = {0, 1, 2, 3};
+    sort(p.begin(), p.end(), [this](int a, int b) {
+      return this->comp(a, b);
+    });
+    for (int i = 0; i < 4; ++i) {
+      if (p[i] == me()) return p[i+1];
+    }
+    return -1;
+  }
 
   // retorna si la celda es valida para pasar sin obstaculos (barricadas de otros, edificios, ni jugadores)
   bool valid_cell(const Pos& p) {
     return (cell(p).type == Street and cell(p).id == -1 and (cell(p).b_owner == -1 or cell(p).b_owner == me()));
   }
 
-  bool valid_cell_for_attacking(const Pos& p) {
-    return (cell(p).type == Street and (cell(p).b_owner == -1 or cell(p).b_owner == me() ));
+  bool valid_cell_for_attacking(const Pos& p, const Pos& pos_ini) {
+    return (cell(p).type == Street and ((cell(p).b_owner == -1 or cell(p).b_owner == me()) or (cell(p).b_owner != -1 and is_enemy(p) and ((cell(p).resistance <= barricade_max_resistance() and cell(pos_ini).weapon == Bazooka) or (cell(p).resistance <= barricade_max_resistance()/3)))));
   }
 
   bool between_buildings(const Pos& p) {
@@ -192,7 +208,7 @@ struct PLAYER_NAME : public Player {
 
       for (Dir d : dirs) {
         Pos npos = pos + d;
-        if (pos_ok(npos) and not visited[npos.i][npos.j] and valid_cell_for_attacking(npos)) {
+        if (pos_ok(npos) and not visited[npos.i][npos.j] and valid_cell_for_attacking(npos, pos_ini)) {
           q.push(npos);
           visited[npos.i][npos.j] = true;
           prev_path[npos.i][npos.j] = pos;
@@ -211,7 +227,7 @@ struct PLAYER_NAME : public Player {
     queue<Pos> q;
     q.push(pos_ini);
 
-    int w = winner();
+    int w = id_more_points();
 
     while (not q.empty()) {
       Pos pos = q.front();
@@ -219,7 +235,7 @@ struct PLAYER_NAME : public Player {
 
       for (Dir d : dirs) {
         Pos npos = pos + d;
-        if (pos_ok(npos) and not visited[npos.i][npos.j] and valid_cell_for_attacking(npos)) {
+        if (pos_ok(npos) and not visited[npos.i][npos.j] and valid_cell_for_attacking(npos, pos_ini)) {
           q.push(npos);
           visited[npos.i][npos.j] = true;
           prev_path[npos.i][npos.j] = pos;
@@ -244,7 +260,7 @@ struct PLAYER_NAME : public Player {
 
       for (Dir d : dirs) {
         Pos npos = pos + d;
-        if (pos_ok(npos) and not visited[npos.i][npos.j] and valid_cell_for_attacking(npos)) {
+        if (pos_ok(npos) and not visited[npos.i][npos.j] and valid_cell_for_attacking(npos, pos_ini)) {
           q.push(npos);
           visited[npos.i][npos.j] = true;
           prev_path[npos.i][npos.j] = pos;
@@ -263,7 +279,7 @@ struct PLAYER_NAME : public Player {
     queue<Pos> q;
     q.push(pos_ini);
 
-    int w = winner();
+    int w = id_more_points();
 
     while (not q.empty()) {
       Pos pos = q.front();
@@ -271,7 +287,7 @@ struct PLAYER_NAME : public Player {
 
       for (Dir d : dirs) {
         Pos npos = pos + d;
-        if (pos_ok(npos) and not visited[npos.i][npos.j] and valid_cell_for_attacking(npos)) {
+        if (pos_ok(npos) and not visited[npos.i][npos.j] and valid_cell_for_attacking(npos, pos_ini)) {
           q.push(npos);
           visited[npos.i][npos.j] = true;
           prev_path[npos.i][npos.j] = pos;
